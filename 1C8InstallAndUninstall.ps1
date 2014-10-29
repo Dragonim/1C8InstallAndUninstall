@@ -146,7 +146,7 @@ If ($DeletPar -match "all") {
 #  прверим доступ к каталогу с дистрибутивами, как указано выше, для выполнения одноиго из параметров нам понадобиться доступ к каталогу с дистрибутивами
 If (-not (Test-Path -path $DistribDir)) {
     # доступ к каталогу с дистрибутивами 1С закрыт или не существует, запишем это и выйдем из скрипта
-    WriteLog $LogFile "Не удалось получить доступ к каталогу с дистрибутивами 1С, проверьте путь и права доступа"
+    WriteLog $LogFile "Не удалось получить доступ к каталогу с дистрибутивами 1С, проверьте путь и права доступа $DistribDir"
     EndLogFile -LogFile $LogFile
 }# произведём удаление если было задано удалить конкретную версиюIf ($DeletPar -match $RegExpPatternNameFolderDistrib) {     UninstallPlatform -Product ($DistribDir + $DeletPar) -ProductVer $DeletPar -LogFile $LogFile
 }
