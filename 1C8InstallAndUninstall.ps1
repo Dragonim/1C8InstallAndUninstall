@@ -156,7 +156,11 @@ If (-not (Test-Path -path $DistribDir)) {
 # После всех преобразований выше осталось проверить, имееются ли параметры "last" или "eal"
 If ( ($InstallPar -match "last") -or ($DeletPar -match "ael") ) {
     # составим массив из всех имён папок находящихся в дистрибутивах и имеющих вид версии продукта
-    $AllPlatforms = (Get-ChildItem -Path $DistribDir | Where-Object { ($_.Mode -match "^d*") -and ($_.Name -match $RegExpPatternNameFolderDistrib) }).Name
+    # $AllPlatforms = (Get-ChildItem -Path $DistribDir | Where-Object { ($_.Mode -match "^d*") -and ($_.Name -match $RegExpPatternNameFolderDistrib) }).Name
+    # раньше была строчка выше, но постипила инфа (сам не проверял) что скрипт не отрабатывает на windows 7, тоэтому поменяли 1 строчку на равнозначные 3
+    $AuxiliaryVariable = (Get-ChildItem -Path $DistribDir | Where-Object { ($_.Mode -match «^d*») -and ($_.Name -match $RegExpPatternNameFolderDistrib) })
+    $AllPlatforms = @()
+    ForEach ($Element in $AuxiliaryVariable) {$AllPlatforms+=($Element.Name)}
 
     # посмотрим на кол-во найденых дистрибутивов    If ($AllPlatforms.Length -eq 0) {        WriteLog $LogFile "Не найдено не одного дистрибутива 1С Предприятия в $DistribDir установка с ключом -ip 'last' или удаление с ключом -dp 'ael' не будут производиться."
         EndLogFile -LogFile $LogFile
