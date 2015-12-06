@@ -1,8 +1,8 @@
 ﻿# зададим параметры по умолчанию. Данные параметры можно поменять передав их скрипту перед выполнением
-param([string]$dd = "\\Server\1CDistr", # путь до каталога с дистрибутивами платфоры 1С 8
-      [string]$dl = "\\Server\1CLog", # путь до каталога в который будут записываться логи установки и удаления
-      [string]$ip = "last", # параметры инсталяции согласно которым будет работать скрипт
-      [string]$dp = "ael", # параметры удаления соответствии с которыми будет работать скрипт
+param([string]$dd = "C:\Users\DimDr\Downloads\Compressed", # путь до каталога с дистрибутивами платфоры 1С 8
+      [string]$dl = "C:\Users\DimDr\Downloads\Compressed\Logs", # путь до каталога в который будут записываться логи установки и удаления
+      [string]$ip = "8.3.6.2363", # параметры инсталяции согласно которым будет работать скрипт
+      [string]$dp = "8.3.7.1776", # параметры удаления соответствии с которыми будет работать скрипт
       [string]$iod = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1") # параметры задаваемые при установке самой платформы
 
 # Преобразуем все переменные к более читабельному виду
@@ -13,7 +13,7 @@ $DeletPar = $dp
 $InstallOptDistr = $iod
 
 # Вспомогательные параметры
-$RegExpPatternNameFolderDistrib = "^\d+\.\d+\.\d+\.\d+$"
+$RegExpPatternNameFolderDistrib = "^(\d+\.\d+)\.(\d+\.\d+)$"
 
 #======================================================================================
 #======================================================================================
@@ -44,8 +44,20 @@ Function ErrDirLog {
 # функция находит все установленные программы 1С:Предприятия 8 на компьютере
 # Входящие данные: нет
 # Возвращяемые параметры: массив
-Function SearchInstallPlatformInComputer {
+Function SearchInstallPlatformsOnComputer {
     Return Get-WmiObject Win32_Product | Where-Object {$_.Name -match "^(1С|1C)"}   
+}
+
+# Функция проверяет наличие платформы на компьютере
+# Входящие данные: массив уже установленных платформ, искомая платформа, 
+# Возвращяемые параметры: булевое значение
+Function PlatformInstallOnComputer ($AllInstallPlatformOnComputer, $SearchPlatform) {
+    $FlagPlatformInstall = $false    ForEach ($PlatformOnComputer in $AllInstallPlatformOnComputer) {
+        If ($PlatformOnComputer.Version -match $SearchPlatform) {
+            $FlagPlatformInstall = $true        
+        }
+    }
+    Return $FlagPlatformInstall   
 }
 
 # непосредстенное удаление 1С:Предприятие с компьютера
@@ -66,7 +78,7 @@ Function UninstallPlatform ($Product, $ProductVer, $LogFile) {
             WriteLog $LogFile ("Внимание. Должна быть удалена версия " + $ProductVer + ", но в каталоге находиться версия " + $matches.ver + ", именно она будет удалена")
         }
 
-        # Найдём msi файл удаляемого продукта        $MSIfile = "....."        $MSIfile = (Get-ChildItem -Path $Product | Where-Object {$_.Name -match "^(1C|1С).*\.msi$"}).Name        $MSIfile = $Product + $MSIfile        # Проверим найденный путь        If (-not (Test-Path -Path $MSIfile) ) {            WriteLog $LogFile ("Не найден msi файл в каталоге " + $Product + " удаление невозможно")            Return 0        }                # msi файл найден, переопределим переменную $Product для унификации команды удаления        $Product = $MSIfile    }
+        # Найдём msi файл удаляемого продукта        $MSIfile = "....."        $MSIfile = (Get-ChildItem -Path $Product | Where-Object {$_.Name -match "^(1C|1С).*\.msi$"}).Name        $MSIfile = $Product + $MSIfile                # Проверим найденный путь        If (-not (Test-Path -Path $MSIfile) ) {            WriteLog $LogFile ("Не найден msi файл в каталоге " + $Product + " удаление невозможно")            Return 0        }                # msi файл найден, переопределим переменную $Product для унификации команды удаления        $Product = $MSIfile    }
 
     Start-Process -Wait -FilePath msiexec -ArgumentList  ('/uninstall "' + $Product + '" /quiet /norestart /Leo+ "' + $LogFile + '"')
 }
@@ -88,7 +100,7 @@ Function InstallPlatform ($InstallFolder, $InstallOptDistr, $ProductVer, $LogFil
 
     # Найдём установочный msi файл    $InstallMSI = "....."    $InstallMSI = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^(1C|1С).*\.msi$"}).Name    $InstallMSI = $InstallFolder + $InstallMSI    # Проверим найденный путь    If (-not (Test-Path -Path $InstallMSI) ) {        WriteLog $LogFile ("Не найден установочный msi файл в каталоге " + $InstallFolder + " установка прекращена")        Return 0    }    # Поищим файлы ответов    If ( (Test-Path -Path ($InstallFolder + 'adminstallrestart.mst')) -and (Test-Path -Path ($InstallFolder + '1049.mst')) ) {        # файлы ответов найдены, подготовим инсталятор        Start-Process -Wait -FilePath  msiexec -ArgumentList ('/jm "' + $InstallMSI + '" /t adminstallrestart.mst;1049.mst /quiet /norestart /Leo+ "' + $LogFile + '"')    } else {        # файлы ответов не найдены, сообщим это и не будем подготавливать инсталятор        WriteLog $LogFile ("Не найден файл ответов adminstallrestart.mst или 1049.mst в каталоге " + $InstallFolder + " установка будет произведена без подготовки")    }
 
-    # проверим опции установки, если они не соответствуют шаблону, то включим установку всех компонентов    If ( -not ($InstallOptDistr -match "DESIGNERALLCLIENTS=(0|1) THINCLIENT=(0|1) THINCLIENTFILE=(0|1)") ) {        WriteLog $LogFile ("Переданный скрипту параметр '-iod' имеет значение " + $InstallOptDistr + " это недопустимо. Будут установлены все клиентские компаненты платформы.")        $InstallOptDistr = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1"    }             # произведём непосредственную установку    Start-Process -Wait -FilePath msiexec -ArgumentList ('/package "' + $InstallMSI + '" ' + $InstallOptDistr + ' /quiet /norestart /Leo+ "' + $LogFile + '"')}
+    # проверим опции установки, если они не соответствуют шаблону, то включим установку всех компонентов    If ( -not ($InstallOptDistr -match "DESIGNERALLCLIENTS=(0|1) THINCLIENT=(0|1) THINCLIENTFILE=(0|1)") ) {        WriteLog $LogFile ("Переданный скрипту параметр '-iod' имеет значение " + $InstallOptDistr + " это недопустимо. Будут установлены все клиентские компаненты платформы.")        $InstallOptDistr = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1"    }             # произведём непосредственную установку    Start-Process -Wait -FilePath msiexec -ArgumentList ('/package "' + $InstallMSI + '" ' + $InstallOptDistr + ' /quiet /norestart /Leo+ "' + $LogFile + '"')    }
 
 #================= Конец Функций ======================================================
 #======================================================================================
@@ -124,75 +136,83 @@ If (Test-Path -path $LogFile) {
 
 # запишем данные о начале работы скрипта
 " " >> $LogFile
-"---------------------------------------------------------------------------------" >> $LogFileWriteLog $LogFile "Начало работы скрипта"If ($StrErr.Length -ne 0) {WriteLog $LogFile $StrErr}        
-# отработаем исключителюную операцию удаления всех дистрибутивов если в скрипт передали параметр -dp "all"
-If ($DeletPar -match "all") {
-    WriteLog $LogFile "Параметр удаления находяться в положении 'all', все остальные параметры игнорируются и производиться удаление всех найденных на компьютере платформ."
-    # получим все установленные 1С платформы на компьютере
-    $Array = SearchInstallPlatformInComputer
-    # Последовательно удалим все платформы
-    ForEach ($Element in $Array) {
-        UninstallPlatform -Product $Element.IdentifyingNumber -ProductVer $Element.Version -LogFile $LogFile    
-    }
-    EndLogFile -LogFile $LogFile
-}
-
+"---------------------------------------------------------------------------------" >> $LogFile"Параметры запуска скрипта: -dd '$dd' -dl '$dl' -dp '$dp' -ip '$ip' -iod '$iod'" >> $LogFileWriteLog $LogFile "Начало работы скрипта"If ($StrErr.Length -ne 0) {WriteLog $LogFile $StrErr}        
 # Проверим необходимость дальнейших действий. Параметры установки и удаления находятся в положении "no"?If ($InstallPar -match "no" -and $DeletPar -match "no") {    WriteLog $LogFile "Параметры установки и удаления находяться в положении 'no', ни каких действий выполнять не требуется."
     EndLogFile -LogFile $LogFile
 }# Проверим необходимость дальнейших действий. Параметры установки и удаления должны иметь понятные значения?If ( -not ( ( ($InstallPar -match "no") -or ($InstallPar -match "last") -or ($InstallPar -match $RegExpPatternNameFolderDistrib) ) -or      ( ($DeletPar -match "no") -or ($DeletPar -match "ael") -or ($DeletPar -match $RegExpPatternNameFolderDistrib) ) )   ) {
     WriteLog $LogFile "Параметр инсталяции и установки не подходит не под один из известных, ни каких действий выполнять не требуется."    EndLogFile -LogFile $LogFile
 }
+# найдём все установленные платформы 1С на компьютере
+# достаточно длительная операция. если появится возможность её ускорить или убрать, то сообщите
+$InstallPlatformsOnComputer = SearchInstallPlatformsOnComputer
+
+# отработаем исключителюную операцию удаления всех дистрибутивов если в скрипт передали параметр -dp "all"
+If ($DeletPar -match "all") {
+    WriteLog $LogFile "Параметр удаления находяться в положении 'all', все остальные параметры игнорируются и производиться удаление всех найденных на компьютере платформ."
+    # Последовательно удалим все платформы
+    ForEach ($PlatformOnComputer in $InstallPlatformsOnComputer) {
+        UninstallPlatform -Product $PlatformOnComputer.IdentifyingNumber -ProductVer $PlatformOnComputer.Version -LogFile $LogFile    
+    }
+    EndLogFile -LogFile $LogFile
+}
+
 # После всех проверок выше можно заключить что имеется хотябы один из параметров "x.x.x.x" или "last" или "ael" 
-#  прверим доступ к каталогу с дистрибутивами, как указано выше, для выполнения одноиго из параметров нам понадобиться доступ к каталогу с дистрибутивами
+#  прверим доступ к каталогу с дистрибутивами, как указано выше, для выполнения одного из параметров нам понадобиться доступ к каталогу с дистрибутивами
 If (-not (Test-Path -path $DistribDir)) {
     # доступ к каталогу с дистрибутивами 1С закрыт или не существует, запишем это и выйдем из скрипта
     WriteLog $LogFile "Не удалось получить доступ к каталогу с дистрибутивами 1С, проверьте путь и права доступа $DistribDir"
     EndLogFile -LogFile $LogFile
-}# произведём удаление если было задано удалить конкретную версиюIf ($DeletPar -match $RegExpPatternNameFolderDistrib) {     UninstallPlatform -Product ($DistribDir + $DeletPar) -ProductVer $DeletPar -LogFile $LogFile
-}
-
-# произведём установку если было заданано установить конкретную версиюIf ($InstallPar -match $RegExpPatternNameFolderDistrib) {     InstallPlatform -InstallFolder ($DistribDir + $InstallPar) -InstallOptDistr $InstallOptDistr -ProductVer $InstallPar -LogFile $LogFile
-}
-# После всех преобразований выше осталось проверить, имееются ли параметры "last" или "eal"
-If ( ($InstallPar -match "last") -or ($DeletPar -match "ael") ) {
-    # составим массив из всех имён папок находящихся в дистрибутивах и имеющих вид версии продукта
-    # $AllPlatforms = (Get-ChildItem -Path $DistribDir | Where-Object { ($_.Mode -match "^d*") -and ($_.Name -match $RegExpPatternNameFolderDistrib) }).Name
-    # раньше была строчка выше, но постипила инфа (сам не проверял) что скрипт не отрабатывает на windows 7, тоэтому поменяли 1 строчку на равнозначные 3
-    $AuxiliaryVariable = (Get-ChildItem -Path $DistribDir | Where-Object { ($_.Mode -match «^d*») -and ($_.Name -match $RegExpPatternNameFolderDistrib) })
-    $AllPlatforms = @()
-    ForEach ($Element in $AuxiliaryVariable) {$AllPlatforms+=($Element.Name)}
-
-    # посмотрим на кол-во найденых дистрибутивов    If ($AllPlatforms.Length -eq 0) {        WriteLog $LogFile "Не найдено не одного дистрибутива 1С Предприятия в $DistribDir установка с ключом -ip 'last' или удаление с ключом -dp 'ael' не будут производиться."
-        EndLogFile -LogFile $LogFile
-    } elseif ($AllPlatforms.Length -eq 1) {
-        If ($InstallPar -match 'last' ) {
-            WriteLog $LogFile "Найден только один дитрибутив. Он будет установлен как самый старший."
-            InstallPlatform -InstallFolder ($DistribDir + $AllPlatforms[0]) -InstallOptDistr $InstallOptDistr -ProductVer $AllPlatforms[0] -LogFile $LogFile
-        } ifelse ($DeletPar -match 'ael') {
-            WriteLog $LogFile "Найден только один дитрибутив. Удаление произведено не будет, т.к. данный дистрибутив является последним (старшим)."
+}# произведём установку если было заданано установить конкретную версию, но перед этим проверим что данная версия не установлена на компьютерIf ($InstallPar -match $RegExpPatternNameFolderDistrib) {    If (PlatformInstallOnComputer $InstallPlatformsOnComputer $InstallPar) {
+        WriteLog $LogFile "Платформа 1С версии $InstallPar уже установлена"
+    } else {
+    # надо проверить существование пути до устанавливаемой платформы
+        If (Test-Path -path ($DistribDir + $InstallPar)) {
+            InstallPlatform -InstallFolder ($DistribDir + $InstallPar) -InstallOptDistr $InstallOptDistr -ProductVer $InstallPar -LogFile $LogFile
+        } else {
+            WriteLog $LogFile "Не существует каталога $DistribDir$InstallPar. Установка произведена не будет"
         }
-        EndLogFile -LogFile $LogFile
     }
+}
+# Проверим имееются ли параметры "last" или "eal"If ( ($InstallPar -match "last") -or ($DeletPar -match "ael") ) {    # вспомогательные переменные    If ($DeletPar -match "ael") {         [array]$NeedUninstallPlatforms = @()
+    }    $CountPlatform = 0    $MaxNumMajor = 0    $MaxNumMinor = 0    # пройдёмся по папке с дистрибутивами и найдём старшую из версий, а так же создадим массив платформ которые должны быть удалены    ForEach ($Element in (Get-ChildItem -Path $DistribDir)) {        If (($Element.Mode -match "d*") -and ($Element.Name -match $RegExpPatternNameFolderDistrib)) {                    $CountPlatform = $CountPlatform + 1            # найдём старшую платформу            If ([double]$Matches[1] -eq $MaxNumMajor) {                If ([double]$Matches[2] -ge $MaxNumMinor) {                    $HighPlatform = $Element.Name                    $MaxNumMinor = [double]$Matches[2]                }            }            If ([double]$Matches[1] -gt $MaxNumMajor) {                $HighPlatform = $Element.Name                $MaxNumMajor = [double]$Matches[1]                $MaxNumMinor = [double]$Matches[2]            }            # пометим платформу на удаление, если она совпадает с установленной на компьютере            If ($DeletPar -match "ael") {                 ForEach ($PlatformOnComputer in $InstallPlatformsOnComputer) {                    If ($Element.Name -eq $PlatformOnComputer.Version) {                        $NeedUninstallPlatforms = $NeedUninstallPlatforms + $Element.Name                     }                }            }        }    }        # посмотрим на кол-во найденых дистрибутивов    If ($CountPlatform -eq 0) {        WriteLog $LogFile "Не найдено не одного дистрибутива 1С Предприятия в $DistribDir установка с ключом -ip 'last' или удаление с ключом -dp 'ael' не будут производиться."
+    } elseif ($CountPlatform -eq 1) {
+        If ($InstallPar -match 'last' ) {
+            # проверим не установлен ли старший дистрибутив, чтобы избежать повторной установки
+            If (PlatformInstallOnComputer $InstallPlatformsOnComputer $HighPlatform) {
+                WriteLog $LogFile "Найден только один дистрибудит $HighPlatform, но он уже установлен, повторная установка производиться не будет."
+            } else {            
+                InstallPlatform -InstallFolder ($DistribDir + $HighPlatform) -InstallOptDistr $InstallOptDistr -ProductVer $HighPlatform -LogFile $LogFile
+            }
+        }
+        If ($DeletPar -match 'ael') {
+            WriteLog $LogFile "Найден только один дитрибутив $HighPlatform. Удаление произведено не будет, т.к. данный дистрибутив является последним (старшим)."
+        }
+    } else {
 
-    # было найдено много дистрибутивов, найдём самый старший из них    # тут я не смог придумать красивого и эффективного алгоритма, поэтому получилось ЭТО    # алгоритм вымещения. будем брать по порядку каждую цифру до точки и искать максимальную из них.    # те элементы у которых цифра меньше найденной максимальной будут зануляться    $Arr = $AllPlatforms.Clone()    # чтобы потом узнать какой из элементов ещё не занулён, продублируем строки    For ($i = 0; $i -lt $Arr.Length; $i++) {        $Arr[$i] = $Arr[$i] + '.' + $Arr[$i]    }    # запустим сам алгоритм    For ($i = 0 ; $i -lt 4 ; $i++) {        $max = 0        # этим циклом найдём максимальную из старших цифр        For ($j = 0; $j -lt $Arr.Length; $j++) {            # если элемент ещё не занулён, то система проверит его старшую цифру            If ($Arr[$j] -match "^(?<digit>\d*)\.(?<other>.*?)$") {                If ([int32]$Matches.digit -gt $max) {$max = [int32]$Matches.digit}            }        }        # этим циклом занулим все элементы у которых старшая цифра меньше максимальной и сдвиним элемент удалив в нём старшую цифру        For ($j = 0; $j -lt $Arr.Length; $j++) {            # если элемент ещё не занулён, то система занулит его или сдвинит            If ($Arr[$j] -match "^(?<digit>\d*)\.(?<other>.*?)$") {                If ([int32]$Matches.digit -lt $max) {                    $Arr[$j] = ""                } else {                    $Arr[$j] = $Matches.other                }            }        }    }    # найдём и выберем оставшийся не пустой элемент из массива, он соответствует папки со старшей версии    ForEach ($Element in $arr) {        If ($Element -match $RegExpPatternNameFolderDistrib) {[string]$LastDistr = $Element}    }            # найдём все установленные на компьютер платформы 1С    $ArrayInstallPlatformsInComputer = SearchInstallPlatformInComputer
-        # удалим все установленные версии кроме старшей если это требуется    If ($DeletPar -match "ael") {        # перед удалением проверим версию платформы установленную на компьютер и версию имеющегося дистрибутива (имя папки), если они совпадут, то удалим дистрибутив с компьютера
-        ForEach ($InstallPlatformInComputer in $ArrayInstallPlatformsInComputer) {
-            ForEach ($PlatformInFolder in $AllPlatforms) {
-                If ( ($InstallPlatformInComputer.Version -match $PlatformInFolder) -and -not ($PlatformInFolder -match $LastDistr) ) {
-                    UninstallPlatform -Product ($DistribDir + $PlatformInFolder) -ProductVer $PlatformInFolder -LogFile $LogFile
+        # установим старшую версию, если это требуется        If ($InstallPar -match 'last') {            # проверим, не установлена ли уже данная версия на компьютере            If (PlatformInstallOnComputer $InstallPlatformsOnComputer $HighPlatform) {
+                WriteLog $LogFile "Последняя (старшая) платформа $HighPlatform уже установлена."
+            } else {            
+                InstallPlatform -InstallFolder ($DistribDir + $HighPlatform) -InstallOptDistr $InstallOptDistr -ProductVer $HighPlatform -LogFile $LogFile
+            }
+        }        # удалим все установленные версии кроме старшей если это требуется        If ($DeletPar -match "ael") {            ForEach ($Platform in $NeedUninstallPlatforms) {
+                If ( -not ($Platform -match $HighPlatform) ) {
+                    UninstallPlatform -Product ($DistribDir + $Platform) -ProductVer $Platform -LogFile $LogFile
                 }
             }
         }
-    }
-    # установим старшую версию, если это требуется    If ($InstallPar -match 'last') {        # проверим, не установлена ли уже данная версия на компьютере        $FlagLastPlatformInstall = $false        ForEach ($InstallPlatformInComputer in $ArrayInstallPlatformsInComputer) {
-            If ($InstallPlatformInComputer.Version -match $LastDistr) {$FlagLastPlatformInstall = $true}
+    }}# произведём удаление если было задано удалить конкретную версию, удаление менее приоритетно, поэтому надо убедиться что данная версия не была задана для установкиIf ($DeletPar -match $RegExpPatternNameFolderDistrib) {    If (($InstallPar -match 'last') -and ($CountPlatform -ne 0)) {        If ($DeletPar -eq $HighPlatform) {            WriteLog $LogFile "Платформа 1С версии $DeletPar не будет удалена, т.к. она считается старшей."
+        }    } elseif ($InstallPar -eq $DeletPar) {        WriteLog $LogFile "Ключи dl и di совпадают. Удаление производиться не будет"
+    } else {        $FlagPlatformInstall = $false        ForEach ($PlatformOnComputer in $InstallPlatformsOnComputer) {
+            If ($PlatformOnComputer.Version -match $DeletPar) {
+                $FlagPlatformInstall = $true 
+                $NeedUninstallPlatform = $PlatformOnComputer       
+            }
         }
-        If (-not $FlagLastPlatformInstall) {
-            InstallPlatform -InstallFolder ($DistribDir + $LastDistr) -InstallOptDistr $InstallOptDistr -ProductVer $LastDistr -LogFile $LogFile
+        If ($FlagPlatformInstall) {
+            UninstallPlatform -Product $NeedUninstallPlatform.IdentifyingNumber -ProductVer $NeedUninstallPlatform.Version -LogFile $LogFile    
         } else {
-            WriteLog $LogFile "Последняя (старшая) платформа $LastDistr уже установлена."
+            WriteLog $LogFile "Платформа 1С версии $DeletPar не установлена. Удалять нечего"
         }
     }
-}
-
+}
 EndLogFile -LogFile $LogFile
