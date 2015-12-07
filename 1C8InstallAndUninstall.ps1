@@ -1,6 +1,6 @@
 ﻿# зададим параметры по умолчанию. Данные параметры можно поменять передав их скрипту перед выполнением
-param([string]$dd = "\\Server1C\1CDistr", # путь до каталога с дистрибутивами платфоры 1С 8
-      [string]$dl = "\\Server1C\Logs", # путь до каталога в который будут записываться логи установки и удаления
+param([string]$dd = "\\Server\1CDistr", # путь до каталога с дистрибутивами платфоры 1С 8
+      [string]$dl = "\\Server\1СLogs", # путь до каталога в который будут записываться логи установки и удаления
       [string]$ip = "last", # параметры инсталяции согласно которым будет работать скрипт
       [string]$dp = "ael", # параметры удаления соответствии с которыми будет работать скрипт
       [string]$iod = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1") # параметры задаваемые при установке самой платформы
@@ -139,9 +139,9 @@ If (Test-Path -path $LogFile) {
 "---------------------------------------------------------------------------------" >> $LogFile"Параметры запуска скрипта: -dd '$dd' -dl '$dl' -dp '$dp' -ip '$ip' -iod '$iod'" >> $LogFileWriteLog $LogFile "Начало работы скрипта"If ($StrErr.Length -ne 0) {WriteLog $LogFile $StrErr}        
 # Проверим необходимость дальнейших действий. Параметры установки и удаления находятся в положении "no"?If ($InstallPar -match "no" -and $DeletPar -match "no") {    WriteLog $LogFile "Параметры установки и удаления находяться в положении 'no', ни каких действий выполнять не требуется."
     EndLogFile -LogFile $LogFile
-}# Проверим необходимость дальнейших действий. Параметры установки и удаления должны иметь понятные значения?If ( -not ( ( ($InstallPar -match "no") -or ($InstallPar -match "last") -or ($InstallPar -match $RegExpPatternNameFolderDistrib) ) -or      ( ($DeletPar -match "no") -or ($DeletPar -match "ael") -or ($DeletPar -match $RegExpPatternNameFolderDistrib) ) )   ) {
-    WriteLog $LogFile "Параметр инсталяции и установки не подходит не под один из известных, ни каких действий выполнять не требуется."    EndLogFile -LogFile $LogFile
-}
+}# проверим адекватность значений переданныз в параметры# Проверим значения для инсталяцииIf ( -not (  ($InstallPar -match "no") -or ($InstallPar -match "last") -or ($InstallPar -match $RegExpPatternNameFolderDistrib) ) ) {
+    WriteLog $LogFile "Значения параметра инсталяции не подходит не под один из известных, установка производиться не будет."}# Проверим значения для удаленияIf ( -not ( ($DeletPar -match "no") -or ($DeletPar -match "ael") -or ($DeletPar -match $RegExpPatternNameFolderDistrib) -or ($DeletPar -match "all") ) ) {
+    WriteLog $LogFile "Значения параметра удаления не подходит не под один из известных, удаление производиться не будет."}
 # найдём все установленные платформы 1С на компьютере
 # достаточно длительная операция. если появится возможность её ускорить или убрать, то сообщите
 $InstallPlatformsOnComputer = SearchInstallPlatformsOnComputer
