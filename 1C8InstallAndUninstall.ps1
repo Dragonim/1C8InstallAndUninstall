@@ -103,7 +103,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
         }
 
         # Проверим версию платформы и версию операционной системы, т.к. невозможно установить 64 битную верси платформы на 32 битную версию системы
-        If ( ( $OSArch -match "32" ) -and ( ([string]$SetupFile).Contains("Product=1C:Enterprise 8 (x86-64)") ) ) {
+        If ( ( $OSArch -match "32" ) -and ( ([string]$SetupFile).Contains("Product=1C:Enterprise 8 (x86-64)" -or ([string]$SetupFile).Contains("Product=1C:Enterprise 8 Thin client (x86-64)") ) ) ) {
             WriteLog $LogFile ('В каталоге "' + $InstallFolder + '" находиться 64-бинтая версия платформы, невозможно установить 64-битную версию платформы на 32-битную систему')
             Continue
         }                # Поищем файлы ответов        If ( (Test-Path -Path ($InstallFolder + 'adminstallrestart.mst')) -and (Test-Path -Path ($InstallFolder + '1049.mst')) ) {            # файлы ответов найдены, подготовим инсталятор            Start-Process -Wait -FilePath  msiexec -ArgumentList ('/jm "' + $InstallMSI + '" /t adminstallrestart.mst;1049.mst /quiet /norestart /Leo+ "' + $LogFile + '"')        } else {            # файлы ответов не найдены, сообщим это и не будем подготавливать инсталятор            WriteLog $LogFile ('Не найден файл ответов adminstallrestart.mst или 1049.mst в каталоге "' + $InstallFolder + '" установка будет произведена без подготовки')        }
