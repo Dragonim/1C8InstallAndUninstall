@@ -1,6 +1,6 @@
 # Описание: Скрипт позволяет устанавливать и удалять платформу 1С
 # Автор: Dim
-# Версия: 1.03
+# Версия: 1.04
 # зададим параметры по умолчанию. Данные параметры можно поменять передав их скрипту перед выполнением
 param([string]$dd = "\\1CServer\1CDistr", # путь до каталога с дистрибутивами платфоры 1С 8
       [string]$dl = "\\1CServer\1CLogs", # путь до каталога в который будут записываться логи установки и удаления
@@ -119,7 +119,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             
         # Найдём установочный msi файл
         $InstallMSI = "....."
-        $InstallMSI = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^(1C|1С).*\.msi$"}).Name
+        $InstallMSI = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^(1CEnterprise 8 \(x86-64\)|1CEnterprise 8)\.msi$"}).Name
         $InstallMSI = $InstallFolder + $InstallMSI
 
         # Проверим найденный путь
@@ -164,6 +164,12 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             $InstallOptDistr = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1"
         }    
      
+        # произведём установку Visual C++ Redistributable
+        $vc_redist = "....."
+        $vc_redist = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^vc_redist.*.exe$"}).Name
+        $vc_redist = $InstallFolder + $vc_redist
+        Start-Process -Wait -FilePath $vc_redist -ArgumentList ('/install /quiet')
+        
         # произведём непосредственную установку
         Start-Process -Wait -FilePath msiexec -ArgumentList ('/package "' + $InstallMSI + '" ' + $InstallOptDistr + ' /quiet /norestart /Leo+ "' + $LogFile + '"')    
         $FlagAttemptInstall = $true
