@@ -181,8 +181,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             }  else {
             Start-Process -Wait -FilePath $vc_redist -ArgumentList ('/install /quiet')
             }
-        }
-        
+        }        
         
         # произведём непосредственную установку
         Start-Process -Wait -FilePath msiexec -ArgumentList ('/package "' + $InstallMSI + '" ' + $InstallOptDistr + ' /quiet /norestart /Leo+ "' + $LogFile + '"')    
