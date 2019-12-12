@@ -120,7 +120,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
         # Найдём установочный msi файл
         $InstallMSI = "....."
         $InstallMSI = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^(1CEnterprise 8 \(x86-64\)|1CEnterprise 8)\.msi$"}).Name
-        If ($InstallMSI -match "") {
+        If ($InstallMSI -match "^$") {
             WriteLog $LogFile ('Не найден установочный msi файл в каталоге "' + $InstallFolder + '". Установка платформы из данного каталога невозможна.')
             Continue
         }        
@@ -171,7 +171,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
         # произведём установку Visual C++ Redistributable
         $vc_redist = "....."
         $vc_redist = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^vc_redist.*.exe$"}).Name
-        If ($vc_redist -match "") {
+        If ($vc_redist -match "^$") {
             WriteLog $LogFile ('Не найден файл для Visual C++ Redistributable в каталоге "' + $InstallFolder + '". Установка платформы продолжится.')
         } else {        
             $vc_redist = $InstallFolder + $vc_redist
