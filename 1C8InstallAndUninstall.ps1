@@ -179,7 +179,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             If (-not (Test-Path -Path $vc_redist) ) {
                 WriteLog $LogFile ('При поиски файла для Visual C++ Redistributable произошла ошибка. Установка платформы продолжится.')                
             }  else {
-            Start-Process -Wait -FilePath $vc_redist -ArgumentList ('/install /quiet')
+            Start-Process -Wait -FilePath $vc_redist -ArgumentList ('/install /quiet /norestart')
             }
         }        
         
