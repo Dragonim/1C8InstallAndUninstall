@@ -153,15 +153,6 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             Continue
         }
         
-        # Поищем файлы ответов
-        If ( (Test-Path -Path ($InstallFolder + 'adminstallrestart.mst')) -and (Test-Path -Path ($InstallFolder + '1049.mst')) ) {
-            # файлы ответов найдены, подготовим инсталятор
-            Start-Process -Wait -FilePath  msiexec -ArgumentList ('/jm "' + $InstallMSI + '" /t adminstallrestart.mst;1049.mst /quiet /norestart /Leo+ "' + $LogFile + '"')
-        } else {
-            # файлы ответов не найдены, сообщим это и не будем подготавливать инсталятор
-            WriteLog $LogFile ('Не найден файл ответов adminstallrestart.mst или 1049.mst в каталоге "' + $InstallFolder + '" установка будет произведена без подготовки')
-        }
-
         # проверим опции установки, если они не соответствуют шаблону, то включим установку всех компонентов
         If ( -not ($InstallOptDistr -match "DESIGNERALLCLIENTS=(0|1) THINCLIENT=(0|1) THINCLIENTFILE=(0|1)") ) {
             WriteLog $LogFile ('Переданный скрипту параметр "-iod" имеет не допустимое значение "' + $InstallOptDistr + '". Будут установлены все клиентские компоненты платформы.')
@@ -182,6 +173,15 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             Start-Process -Wait -FilePath $vc_redist -ArgumentList ('/install /quiet /norestart')
             }
         }        
+
+        # Поищем файлы ответов
+        If ( (Test-Path -Path ($InstallFolder + 'adminstallrestart.mst')) -and (Test-Path -Path ($InstallFolder + '1049.mst')) ) {
+            # файлы ответов найдены, подготовим инсталятор
+            Start-Process -Wait -FilePath  msiexec -ArgumentList ('/jm "' + $InstallMSI + '" /t adminstallrestart.mst;1049.mst /quiet /norestart /Leo+ "' + $LogFile + '"')
+        } else {
+            # файлы ответов не найдены, сообщим это и не будем подготавливать инсталятор
+            WriteLog $LogFile ('Не найден файл ответов adminstallrestart.mst или 1049.mst в каталоге "' + $InstallFolder + '" установка будет произведена без подготовки')
+        }
         
         # произведём непосредственную установку
         Start-Process -Wait -FilePath msiexec -ArgumentList ('/package "' + $InstallMSI + '" ' + $InstallOptDistr + ' /quiet /norestart /Leo+ "' + $LogFile + '"')    
