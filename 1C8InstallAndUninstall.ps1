@@ -1,6 +1,6 @@
 # Описание: Скрипт позволяет устанавливать и удалять платформу 1С
 # Автор: Dim
-# Версия: 1.05
+# Версия: 1.06
 # зададим параметры по умолчанию. Данные параметры можно поменять передав их скрипту перед выполнением
 param([string]$dd = "\\1CServer\1CDistr", # путь до каталога с дистрибутивами платфоры 1С 8
       [string]$dl = "\\1CServer\1CLogs", # путь до каталога в который будут записываться логи установки и удаления
@@ -16,7 +16,7 @@ $DeletPar = $dp
 $InstallOptDistr = $iod
 
 # Вспомогательные параметры
-$ScriptVersion = "1.05"
+$ScriptVersion = "1.06"
 $RegExpPatternNumPlatform = "^(\d+\.\d+)\.(\d+\.\d+)$"
 $RegExpPatternNameFolderDistrib = "^(\d+\.\d+)\.(\d+\.\d+)(|-32|-64)$"
 
@@ -256,21 +256,20 @@ If ($InstallPar -match "^no$" -and $DeletPar -match "^no$") {
     EndLogFile -LogFile $LogFile
 }
 
-# Проверим значения для инсталяции
-If ( -not (  ($InstallPar -match "^no$") -or ($InstallPar -match "^last$") -or ($InstallPar -match $RegExpPatternNumPlatform) ) ) {
-    WriteLog $LogFile "Значения параметра инсталяции не подходит не под один из известных. Работа скрипта прервана."
-    EndLogFile -LogFile $LogFile
-}
-
-$InstallPlatformsOnComputer = SearchInstallPlatformsOnComputer
-
 # отработаем исключителюную операцию удаления всех дистрибутивов если в скрипт передали параметр -dp "all"
 If ($DeletPar -match "^all$") {
     WriteLog $LogFile 'Параметр удаления находяться в положении "all", все остальные параметры игнорируются и производиться удаление всех найденных на компьютере платформ 1С Предприятие.'
-    # Последовательно удалим все платформы
+	$InstallPlatformsOnComputer = SearchInstallPlatformsOnComputer
+	# Последовательно удалим все платформы
     ForEach ($PlatformOnComputer in $InstallPlatformsOnComputer) {
         UninstallPlatform -Product $PlatformOnComputer -LogFile $LogFile
     }
+    EndLogFile -LogFile $LogFile
+}
+
+# Проверим значения для инсталяции
+If ( -not (  ($InstallPar -match "^no$") -or ($InstallPar -match "^last$") -or ($InstallPar -match $RegExpPatternNumPlatform) ) ) {
+    WriteLog $LogFile "Значения параметра инсталяции не подходит не под один из известных. Работа скрипта прервана."
     EndLogFile -LogFile $LogFile
 }
 
