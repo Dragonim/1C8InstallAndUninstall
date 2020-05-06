@@ -1,6 +1,6 @@
 # Описание: Скрипт позволяет устанавливать и удалять платформу 1С
 # Автор: Dim
-# Версия: 1.06
+# Версия: 1.07
 # зададим параметры по умолчанию. Данные параметры можно поменять передав их скрипту перед выполнением
 param([string]$dd = "\\1CServer\1CDistr", # путь до каталога с дистрибутивами платфоры 1С 8
       [string]$dl = "\\1CServer\1CLogs", # путь до каталога в который будут записываться логи установки и удаления
@@ -16,7 +16,7 @@ $DeletPar = $dp
 $InstallOptDistr = $iod
 
 # Вспомогательные параметры
-$ScriptVersion = "1.06"
+$ScriptVersion = "1.07"
 $RegExpPatternNumPlatform = "^(\d+\.\d+)\.(\d+\.\d+)$"
 $RegExpPatternNameFolderDistrib = "^(\d+\.\d+)\.(\d+\.\d+)(|-32|-64)$"
 
@@ -120,7 +120,7 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
             
         # Найдём установочный msi файл
         $InstallMSI = "....."
-        $InstallMSI = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^(1CEnterprise 8 \(x86-64\)|1CEnterprise 8)\.msi$"}).Name
+        $InstallMSI = (Get-ChildItem -Path $InstallFolder | Where-Object {$_.Name -match "^(1CEnterprise 8 \(x86-64\)|1CEnterprise 8|1CEnterprise 8 Thin client \(x86-64\)|1CEnterprise 8 Thin client)\.msi$"}).Name
         If ($InstallMSI -match "^$") {
             WriteLog $LogFile ('Не найден установочный msi файл в каталоге "' + $InstallFolder + '". Установка платформы из данного каталога невозможна.')
             Continue
