@@ -6,7 +6,8 @@ param([string]$dd = "\\1CServer\1CDistr", # путь до каталога с дистрибутивами пл
       [string]$dl = "\\1CServer\1CLogs", # путь до каталога в который будут записыватьс€ логи установки и удалени€
       [string]$ip = "last", # параметры инстал€ции согласно которым будет работать скрипт
       [string]$dp = "ael", # параметры удалени€ соответствии с которыми будет работать скрипт
-      [string]$iod = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1") # параметры задаваемые при установке самой платформы
+      [string]$iod = "DESIGNERALLCLIENTS=1 THINCLIENT=1 THINCLIENTFILE=1", # параметры задаваемые при установке самой платформы
+      [string]$osa = "") # битность "32" или "64", если не задано, то равно битности ќ—
 
 # ѕреобразуем все переменные к более читабельному виду
 $DistribDir = $dd
@@ -14,6 +15,7 @@ $DirLog = $dl
 $InstallPar = $ip
 $DeletPar = $dp
 $InstallOptDistr = $iod
+$OSArch = $osa
 
 # ¬спомогательные параметры
 $ScriptVersion = "1.07"
@@ -93,11 +95,13 @@ Function InstallPlatform ($DistribDir, $InstallOptDistr, $ProductVer, $LogFile){
     # данный флаг попожет определить была ли произведена попытка установки, нужен в конце скрипта
     $FlagAttemptInstall = $false
       
-    # посмотрим на битность системы
-    If ( (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match "32") {
-        $OSArch = "32"
-    } else {
-        $OSArch = "64"
+    If ( -not ($OSArch -in @("32", "64")) ) {
+        # посмотрим на битность системы
+        If ( (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match "32" ) {
+            $OSArch = "32"
+        } else {
+            $OSArch = "64"
+        }
     }
     
     # составим специальный массив в который запишим пути до возможных видов папок в зависимости от разр€дности системы
@@ -245,7 +249,7 @@ If (Test-Path -path $LogFile) {
 " " >> $LogFile
 "---------------------------------------------------------------------------------" >> $LogFile
 "¬ерси€ скрипта: $ScriptVersion" >> $LogFile
-"ѕараметры запуска скрипта: -dd '$dd' -dl '$dl' -dp '$dp' -ip '$ip' -iod '$iod'" >> $LogFile
+"ѕараметры запуска скрипта: -dd '$dd' -dl '$dl' -dp '$dp' -ip '$ip' -iod '$iod' -osa='$osa'" >> $LogFile
 
 WriteLog $LogFile "Ќачало работы скрипта"
 If ($StrErr.Length -ne 0) {WriteLog $LogFile $StrErr}    
